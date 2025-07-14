@@ -25,7 +25,7 @@ This project is a minimal clone of what powers tools like PyTorch — but built 
 ## 🛠️ What’s Coming Next (v2 Ideas)
 
 - 🔢 More operations: `/`, `//`, `%`, etc.  
-- 🔥 Activation functions: `relu`, `tanh`, `sigmoid`, `lrelu`, and more  
+- 🔥 Activation functions: `relu`, `tanh`, `sigmoid`, `lrelu`,(all of these work for forward pass but not for backward pass) and more  
 - 🎯 Loss functions like MSE,
 - 🧹 `zero_grad()` utility  
 - 🧮 Vector and matrix support for batched computation
