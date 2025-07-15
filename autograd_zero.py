@@ -1,5 +1,4 @@
 import graphviz as gv
-# import weakref
 import math
 
 class Neuron:
@@ -18,14 +17,34 @@ class Neuron:
     def tanh(self):
         """Tanh activation function"""
         ans = math.tanh(self.val)
-        return Neuron(ans,[self],"tanh")       
+        pkg = Neuron(ans,[self],"tanh") 
+
+        def _back_prop():
+            pkg.parents[0].grad += pkg.grad*(1-pkg.val**2)
+        
+        pkg._backward = _back_prop
+        return pkg       
     def relu(self):
         ans = max(0,self.val)
-        return Neuron(ans,[self],"relu")
+        pkg = Neuron(ans,[self],"relu")
+
+        def _back_prop():
+            x = pkg.parents[0]
+            if(x.val>0):
+                x.grad +=pkg.grad
+        pkg._backward = _back_prop 
+        return pkg 
     def sigmoid(self):
         out = math.exp(-self.val)
         ans = 1/(1+out)
-        return Neuron(ans,[self],"sigmoid")
+        pkg = Neuron(ans,[self],"sigmoid")
+
+        def _back_prop():
+            x = pkg.parents[0]
+            x.grad += pkg.grad*pkg.val * (1-pkg.val)
+
+        pkg._backward = _back_prop
+        return 
     def lrelu(self):
         ans = self.val
         if(self.val< 0):
@@ -76,8 +95,8 @@ class Neuron:
         pkg = Neuron(self.val-other.val,[self,other],"-")
 
         def _back_prop():
-            pkg.parents[0] += 1*pkg.grad
-            pkg.parents[1] += -1*pkg.grad
+            pkg.parents[0].grad += 1*pkg.grad
+            pkg.parents[1].grad += -1*pkg.grad
 
         pkg._backward = _back_prop
         return pkg 
@@ -86,8 +105,8 @@ class Neuron:
         pkg = Neuron(other.val-self.val,[other,self],"-")
 
         def _back_prop():
-            pkg.parents[0].grad += -1*pkg.grad
-            pkg.parents[1].grad += 1*pkg.grad
+            pkg.parents[0].grad += 1*pkg.grad
+            pkg.parents[1].grad += -1*pkg.grad
         pkg._backward = _back_prop
         return pkg
     def __pow__(self,other):
@@ -104,17 +123,62 @@ class Neuron:
         pkg._backward = _back_prop
         return pkg
     
-    #Going to implement in version-2
+    #Got to implement in version-2
     def __truediv__(self,other):
-        pass
-    def __floordiv__(self,other):
-        pass
+        other = Neuron._ensure_neuron(other)
+        if(other.val==0):
+            raise ZeroDivisionError("Division by zero is not allowed")
+        
+        pkg =Neuron(self.val/other.val,[self,other],"/")
+
+        def _back_prop():
+            x = pkg.parents[0]
+            y = pkg.parents[1]
+            x.grad += pkg.grad*(1/y.val)*1
+            y.grad += pkg.grad*x.val*(-1/(y.val**2)) 
+        
+        pkg._backward = _back_prop
+        return pkg 
     def __rpow__(self,other):
-        pass
+        other = Neuron._ensure_neuron(other)
+        pkg = Neuron(self.val**other.val,[other,self],"power")
+        
+        def _back_prop():
+
+            x = pkg.parents[0]
+            y = pkg.parent[1]
+            z = x.val
+            if(z<=0):
+                z+=1e-10 
+            x.grad += pkg.grad * (y.val * base_val ** (y.val - 1))
+            y.grad += pkg.grad * pkg.val * math.log(z)
+        
+        pkg._backward = _back_prop
+        return pkg
     def __rtruediv__(self,other):
-        pass
+        other = Neuron._ensure_neuron(other)
+        if(self.val==0):
+            raise ZeroDivisionError("Division by zero is not allowed")
+        
+        pkg =Neuron(other.val/self.val,[other,self],"/")
+
+        def _back_prop():
+            x = pkg.parents[0]
+            y = pkg.parents[1]
+            x.grad += pkg.grad*(1/y.val)*1
+            y.grad += pkg.grad*x.val*(-1/(y.val**2)) 
+        
+        pkg._backward = _back_prop
+        return pkg 
+    
+    #Not Implementable
     def __rfloordiv__(self,other):
-        pass
+        """It is not diffrentable due to its jumpy behaviour like for 4.999999 it is 4 but for 5.00 it is 5"""
+        raise Exception("Not Supported due to it's non differential behaviour")
+    def __floordiv__(self,other):
+        """It is not diffrentable due to its jumpy behaviour like for 4.999999 it is 4 but for 5.00 it is 5"""
+        raise Exception("Not Supported due to it's non differential behaviour")
+
 
 #Loss Functions
     def mse(self,other):
@@ -203,12 +267,13 @@ class Neuron:
                 continue
             Neuron._dfs(p,vis,dot,idx)
 
-
-a=Neuron(54)
-b=26
-c = a*b
-d = c+10
-Loss = 30-d
-type(Loss)
-Loss.backward()
-Loss.drawGraph()
+if __name__ == "__main__":
+    a=Neuron(54)
+    b=26
+    c = a*b
+    d = c+10
+    e = d**2
+    Loss = 30-e
+    type(Loss)
+    Loss.backward()
+    Loss.drawGraph()
