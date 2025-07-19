@@ -4,7 +4,7 @@ A tiny, easy-to-understand automatic differentiation engine for scalar values..
 
 ##  What’s Working Right Now
 
-This project is a minimal clone of what powers tools like PyTorch — but built from scratch for learning and fun.
+This project is a minimal clone of pytorch autograd engine but with scaler values.
 
 ### ✅ Currently Implemented:
 
