@@ -1,5 +1,6 @@
 import graphviz as gv
 import math
+import random
 
 class Neuron:
     _counter = 0
@@ -146,11 +147,11 @@ class Neuron:
         def _back_prop():
 
             x = pkg.parents[0]
-            y = pkg.parent[1]
+            y = pkg.parents[1]
             z = x.val
             if(z<=0):
                 z+=1e-10 
-            x.grad += pkg.grad * (y.val * base_val ** (y.val - 1))
+            x.grad += pkg.grad * (y.val * z ** (y.val - 1))
             y.grad += pkg.grad * pkg.val * math.log(z)
         
         pkg._backward = _back_prop
@@ -182,7 +183,20 @@ class Neuron:
 
 #Loss Functions
     def mse(self,other):
-        pass
+        other = Neuron._ensure_neuron(other)
+        ans = 0.5*(other.val-self.val)
+        pkg = Neuron(ans,[other,self],"Mean Square Error")
+
+        def _back_prop():
+            x = pkg.parents[0]
+            y = pkg.parents[1]
+            temp = 2*(x.val-y.val)
+            x.grad += temp
+            y.grad += -temp
+        
+        pkg._backward = _back_prop
+        return pkg
+
 
 
 #Basic Utlity Function
@@ -195,17 +209,18 @@ class Neuron:
         vis=[False for _ in range(Neuron._counter)]
         Neuron._toposort(self,vis,ans)
         self.grad = 1.0
-        print(ans)
         ans = ans[::-1]
         for i in ans:
-            print(i)
             i._backward()
         return ans
         
         
     def zero_grad(self):
-        pass
-
+        nodes = []
+        vis = [False for _ in range(Neuron._counter)]
+        Neuron._toposort(self, vis, nodes)
+        for node in nodes:
+            node.grad = 0.0
 #visual functions
     def drawGraph(self):
         dot = gv.Digraph(comment=f"x")
@@ -267,13 +282,41 @@ class Neuron:
                 continue
             Neuron._dfs(p,vis,dot,idx)
 
+
+class singleNeuron:
+    def __init__(self,nin):
+        self.w = [Neuron(random.uniform(-1,1)) for _ in range(nin)]
+        self.b = Neuron(random.uniform(-1,1))
+    
+    def __call__(self,x):
+        ans = sum((wi*xi for wi,xi in zip(self.w,x)),self.b)
+        out = ans.tanh()
+        return out
+    
+class Layer:
+    def __init__(self,nin,nout):
+        self.neurons = [singleNeuron(nin) for _ in range(nout)]
+
+    def __call__(self,x):
+        out = [n(x) for n in self.neurons]
+        return out[0] if len(out) == 1 else out
+
+class MLP:
+    def __init__(self,nin,nout):
+        sz = [nin]+nout
+        self.layers = [Layer(sz[i],sz[i+1]) for i in range(len(nout))]
+    def __call__(self,x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+
 if __name__ == "__main__":
-    a=Neuron(54)
-    b=26
-    c = a*b
-    d = c+10
-    e = d**2
-    Loss = 30-e
-    type(Loss)
-    Loss.backward()
-    Loss.drawGraph()
+    a = [2,3,4]
+    n = MLP(3,[4,4,1])
+    y = 15
+    y_pred = n(a)
+    loss = y_pred.mse(y)
+    # loss.drawGraph()
+    loss.backward()
+    loss.drawGraph()
